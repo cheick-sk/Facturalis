@@ -16,8 +16,20 @@ import os
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Create database tables
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+except Exception as e:
+    logger.error(f"Error creating database tables: {e}")
+    raise
 
 # Create the main app
 app = FastAPI(title="InvoiceFlow API", version="1.0.0")
