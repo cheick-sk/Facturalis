@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://invoiceflow_user:invoiceflow_password@localhost:5432/invoiceflow_db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./invoiceflow.db")
 
 engine = create_engine(
     DATABASE_URL,
