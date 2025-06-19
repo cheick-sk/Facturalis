@@ -2,10 +2,10 @@ from fastapi import FastAPI, APIRouter, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
-from .database import get_db, engine, Base
-from .models import User, Client, Invoice, InvoiceItem, Quote, QuoteItem, Activity
-from . import schemas
-from .auth import get_password_hash, verify_password, create_access_token, get_current_user
+from database import get_db, engine, Base
+from models import User, Client, Invoice, InvoiceItem, Quote, QuoteItem, Activity
+import schemas
+from auth import get_password_hash, verify_password, create_access_token, get_current_user
 from datetime import datetime, timedelta
 import logging
 from pathlib import Path
