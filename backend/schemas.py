@@ -6,9 +6,20 @@ from datetime import datetime
 class UserBase(BaseModel):
     email: EmailStr
     name: str
+    company_name: Optional[str] = None
+    siret: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    company_name: Optional[str] = None
+    siret: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
 
 class User(UserBase):
     id: str
@@ -25,6 +36,9 @@ class ClientBase(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     status: str = "Actif"
+    siret: Optional[str] = None
+    contact_person: Optional[str] = None
+    notes: Optional[str] = None
 
 class ClientCreate(ClientBase):
     pass
@@ -37,11 +51,56 @@ class Client(ClientBase):
     class Config:
         from_attributes = True
 
+# Product/Service Schemas
+class ProductBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    unit: str = "pièce"
+    category: Optional[str] = None
+    is_service: bool = False
+
+class ProductCreate(ProductBase):
+    pass
+
+class Product(ProductBase):
+    id: str
+    user_id: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# Expense Schemas
+class ExpenseBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    amount: float
+    category: str
+    expense_date: Optional[datetime] = None
+    is_billable: bool = False
+    client_id: Optional[str] = None
+    status: str = "En attente"
+
+class ExpenseCreate(ExpenseBase):
+    pass
+
+class Expense(ExpenseBase):
+    id: str
+    user_id: str
+    receipt_path: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 # Invoice Item Schemas
 class InvoiceItemBase(BaseModel):
     description: str
-    quantity: int = 1
+    quantity: float = 1
     price: float
+    tax_rate: float = 20.0
+    product_id: Optional[str] = None
 
 class InvoiceItemCreate(InvoiceItemBase):
     pass
@@ -59,6 +118,10 @@ class InvoiceBase(BaseModel):
     due_date: Optional[datetime] = None
     status: str = "Brouillon"
     description: Optional[str] = None
+    notes: Optional[str] = None
+    payment_terms: Optional[str] = None
+    discount: float = 0.0
+    quote_id: Optional[str] = None
 
 class InvoiceCreate(InvoiceBase):
     items: List[InvoiceItemCreate] = []
@@ -69,6 +132,7 @@ class Invoice(InvoiceBase):
     user_id: str
     date: datetime
     amount: float
+    tax_amount: float
     created_at: datetime
     items: List[InvoiceItem] = []
     
@@ -78,8 +142,10 @@ class Invoice(InvoiceBase):
 # Quote Item Schemas
 class QuoteItemBase(BaseModel):
     description: str
-    quantity: int = 1
+    quantity: float = 1
     price: float
+    tax_rate: float = 20.0
+    product_id: Optional[str] = None
 
 class QuoteItemCreate(QuoteItemBase):
     pass
@@ -94,8 +160,11 @@ class QuoteItem(QuoteItemBase):
 # Quote Schemas
 class QuoteBase(BaseModel):
     client_id: str
+    expiry_date: Optional[datetime] = None
     status: str = "Brouillon"
     description: Optional[str] = None
+    notes: Optional[str] = None
+    discount: float = 0.0
 
 class QuoteCreate(QuoteBase):
     items: List[QuoteItemCreate] = []
@@ -106,6 +175,7 @@ class Quote(QuoteBase):
     user_id: str
     date: datetime
     amount: float
+    tax_amount: float
     created_at: datetime
     items: List[QuoteItem] = []
     
@@ -115,6 +185,8 @@ class Quote(QuoteBase):
 # Activity Schemas
 class ActivityBase(BaseModel):
     description: str
+    activity_type: str = "general"
+    related_id: Optional[str] = None
 
 class ActivityCreate(ActivityBase):
     pass
@@ -137,9 +209,19 @@ class DashboardMetrics(BaseModel):
     clients_change: float
     pending_amount: float
     pending_change: float
+    expenses_total: float
+    quotes_count: int
+    quotes_pending: int
 
 class RecentInvoice(BaseModel):
     invoice_id: str
+    client: str
+    date: str
+    amount: str
+    status: str
+
+class RecentQuote(BaseModel):
+    quote_id: str
     client: str
     date: str
     amount: str
@@ -152,11 +234,18 @@ class TopClient(BaseModel):
     revenue: str
     status: str
 
+class ExpenseSummary(BaseModel):
+    category: str
+    amount: float
+    count: int
+
 class DashboardData(BaseModel):
     metrics: DashboardMetrics
     recent_invoices: List[RecentInvoice]
+    recent_quotes: List[RecentQuote]
     recent_activities: List[Activity]
     top_clients: List[TopClient]
+    expenses_by_category: List[ExpenseSummary]
 
 # Auth Schemas
 class Token(BaseModel):
@@ -166,3 +255,20 @@ class Token(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+# Report Schemas
+class FinancialReport(BaseModel):
+    period: str
+    total_revenue: float
+    total_expenses: float
+    profit: float
+    invoices_paid: int
+    invoices_pending: int
+    quotes_accepted: int
+    quotes_pending: int
+
+class CashFlowData(BaseModel):
+    month: str
+    income: float
+    expenses: float
+    balance: float
