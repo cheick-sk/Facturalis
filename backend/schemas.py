@@ -160,7 +160,7 @@ class QuoteItem(QuoteItemBase):
 
 # Quote Schemas
 class QuoteBase(BaseModel):
-    client_id: str
+    client_id: Optional[str] = None  # Permet None
     expiry_date: Optional[datetime] = None
     status: str = "Brouillon"
     description: Optional[str] = None
@@ -168,6 +168,7 @@ class QuoteBase(BaseModel):
     discount: float = 0.0
 
 class QuoteCreate(QuoteBase):
+    client_id: str  # Obligatoire à la création
     items: List[QuoteItemCreate] = []
 
 class Quote(QuoteBase):
