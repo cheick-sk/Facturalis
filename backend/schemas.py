@@ -114,7 +114,7 @@ class InvoiceItem(InvoiceItemBase):
 
 # Invoice Schemas
 class InvoiceBase(BaseModel):
-    client_id: str
+    client_id: Optional[str] = None  # Permet None
     due_date: Optional[datetime] = None
     status: str = "Brouillon"
     description: Optional[str] = None
@@ -124,6 +124,7 @@ class InvoiceBase(BaseModel):
     quote_id: Optional[str] = None
 
 class InvoiceCreate(InvoiceBase):
+    client_id: str  # Obligatoire à la création
     items: List[InvoiceItemCreate] = []
 
 class Invoice(InvoiceBase):
