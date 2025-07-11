@@ -1,0 +1,18 @@
+node_modules
+
+# Keep environment variables out of version control
+.env
+
+# Prisma
+prisma/migrations/
+prisma/schema.prisma.bak
+/generated/prisma
+
+# Build artifacts
+dist/
+coverage/
+
+# OS specific
+.DS_Store
+npm-debug.log
+yarn-error.log
