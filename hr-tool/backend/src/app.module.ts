@@ -11,7 +11,10 @@ import { ConfigModule } from '@nestjs/config'; // For environment variables
       isGlobal: true, // Makes .env variables available globally
     }),
     PrismaModule,    // Module for Prisma service
-    EmployeeModule,  // Our new Employee module
+    EmployeeModule,  // Our Employee module
+    TimesheetEntryModule, // Our new TimesheetEntry module
+    ProjectModule, // Our new Project module
+    TaskModule, // Our new Task module
   ],
   controllers: [AppController],
   providers: [AppService],

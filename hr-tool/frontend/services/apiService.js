@@ -1,19 +1,27 @@
 const API_GATEWAY_BASE_URL = 'http://localhost:4000/api/v1'; // Assuming API Gateway is on port 4000
 
 async function request(endpoint, options = {}) {
-  const url = `${API_GATEWAY_BASE_URL}${endpoint}`;
+  let url = `${API_GATEWAY_BASE_URL}${endpoint}`;
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
 
   const config = {
-    ...options,
+    method: options.method || 'GET', // Default to GET
     headers,
   };
 
   if (options.body) {
     config.body = JSON.stringify(options.body);
+  }
+
+  // If there are params for a GET request, append them to the URL
+  if (options.params && config.method === 'GET') {
+    const queryParams = new URLSearchParams(options.params).toString();
+    if (queryParams) {
+      url += `?${queryParams}`;
+    }
   }
 
   try {
@@ -41,5 +49,26 @@ export const employeeService = {
   delete: (id) => request(`/employees/${id}`, { method: 'DELETE' }),
 };
 
-// We can add other services here, e.g.:
-// export const departmentService = { ... };
+export const projectService = {
+  getAll: (params) => request('/projects', { params }), // params for potential query string like name
+  getById: (id) => request(`/projects/${id}`),
+  create: (projectData) => request('/projects', { method: 'POST', body: projectData }),
+  update: (id, projectData) => request(`/projects/${id}`, { method: 'PATCH', body: projectData }),
+  delete: (id) => request(`/projects/${id}`, { method: 'DELETE' }),
+};
+
+export const taskService = {
+  getAll: (params) => request('/tasks', { params }), // params for potential query string like projectId
+  getById: (id) => request(`/tasks/${id}`),
+  create: (taskData) => request('/tasks', { method: 'POST', body: taskData }),
+  update: (id, taskData) => request(`/tasks/${id}`, { method: 'PATCH', body: taskData }),
+  delete: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),
+};
+
+export const timesheetEntryService = {
+  getAll: (params) => request('/timesheet-entries', { params }),
+  getById: (id) => request(`/timesheet-entries/${id}`),
+  create: (entryData) => request('/timesheet-entries', { method: 'POST', body: entryData }),
+  update: (id, entryData) => request(`/timesheet-entries/${id}`, { method: 'PATCH', body: entryData }),
+  delete: (id) => request(`/timesheet-entries/${id}`, { method: 'DELETE' }),
+};

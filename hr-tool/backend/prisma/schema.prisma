@@ -24,4 +24,79 @@ model Employee {
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  timesheetEntries TimesheetEntry[] // Relation to TimesheetEntry
+  leaveRequests    LeaveRequest[]   // Relation to LeaveRequest (for future module)
+  absences         Absence[]        // Relation to Absence (for future module)
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  clientName  String?
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tasks            Task[]           // Relation to Task
+  timesheetEntries TimesheetEntry[] // Relation to TimesheetEntry
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  projectId   String    // Relation to Project
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  timesheetEntries TimesheetEntry[] // Relation to TimesheetEntry
+
+  @@unique([name, projectId]) // Task name should be unique within a project
+}
+
+model TimesheetEntry {
+  id          String    @id @default(cuid())
+  date        DateTime  @db.Date
+  startTime   DateTime  // Could be just time, but DateTime is fine for Prisma
+  endTime     DateTime  // Could be just time
+  duration    Float     // Duration in hours, e.g., 1.5 for 1h 30m
+  notes       String?   @db.Text
+
+  employeeId  String    // Relation to Employee
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  projectId   String?   // Optional relation to Project
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull) // SetNull if project deleted
+
+  taskId      String?   // Optional relation to Task
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)   // SetNull if task deleted
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([employeeId, date]) // Index for querying timesheets by employee and date
+}
+
+// Placeholder for future Leave Management module
+model LeaveRequest {
+  id String @id @default(cuid())
+  // ... other fields ...
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  // Example field, to be defined later
+  status String @default("PENDING")
+}
+
+// Placeholder for future Absence Management module
+model Absence {
+  id String @id @default(cuid())
+  // ... other fields ...
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  // Example field, to be defined later
+  reason String?
 }
