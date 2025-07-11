@@ -18,6 +18,8 @@ import { ConfigModule } from '@nestjs/config'; // For environment variables
     LeaveTypeModule, // Our new LeaveType module
     LeaveRequestModule, // Our new LeaveRequest module
     LeaveBalanceModule, // Our new LeaveBalance module
+    AbsenceTypeModule, // Our new AbsenceType module
+    AbsenceModule, // Our new Absence module
   ],
   controllers: [AppController],
   providers: [AppService],

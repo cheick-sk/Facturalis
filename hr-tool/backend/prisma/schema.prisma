@@ -144,13 +144,39 @@ model LeaveBalance {
 }
 
 
-// Placeholder for future Absence Management module
-model Absence {
-  id String @id @default(cuid())
-  // ... other fields ...
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+enum AbsenceStatus {
+  REPORTED    // Absence reported, pending details or justification
+  JUSTIFIED   // Justification provided and accepted
+  UNJUSTIFIED // No valid justification, or justification rejected
+  EXCUSED     // Excused by management for specific reasons
+}
 
-  // Example field, to be defined later
-  reason String?
+model AbsenceType {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., Uncertified Sick Leave, Urgent Personal Matter, Late Arrival
+  description String?  @db.Text
+  absences    Absence[] // Relation to Absence
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Absence {
+  id          String        @id @default(cuid())
+  startDate   DateTime      @db.Date
+  endDate     DateTime      @db.Date // For single day absence, endDate will be same as startDate
+  reason      String?       @db.Text  // Free text reason if no AbsenceType or for additional details
+  status      AbsenceStatus @default(REPORTED)
+  notes       String?       @db.Text  // Additional notes by manager or employee
+
+  employeeId  String
+  employee    Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  absenceTypeId String?     // Optional relation to a predefined absence type
+  absenceType   AbsenceType? @relation(fields: [absenceTypeId], references: [id], onDelete:SetNull)
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([employeeId, startDate])
+  @@index([absenceTypeId])
 }

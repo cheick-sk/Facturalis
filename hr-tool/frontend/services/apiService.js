@@ -98,3 +98,19 @@ export const leaveBalanceService = {
   update: (id, data) => request(`/leave-balances/${id}`, { method: 'PATCH', body: data }),
   // delete: (id) => request(`/leave-balances/${id}`, { method: 'DELETE' }), // Usually not directly deleted
 };
+
+export const absenceTypeService = {
+  getAll: (params) => request('/absence-types', { params }),
+  getById: (id) => request(`/absence-types/${id}`),
+  create: (data) => request('/absence-types', { method: 'POST', body: data }),
+  update: (id, data) => request(`/absence-types/${id}`, { method: 'PATCH', body: data }),
+  delete: (id) => request(`/absence-types/${id}`, { method: 'DELETE' }),
+};
+
+export const absenceService = {
+  getAll: (params) => request('/absences', { params }),
+  getById: (id) => request(`/absences/${id}`),
+  create: (data) => request('/absences', { method: 'POST', body: data }),
+  update: (id, data) => request(`/absences/${id}`, { method: 'PATCH', body: data }),
+  delete: (id) => request(`/absences/${id}`, { method: 'DELETE' }),
+};
