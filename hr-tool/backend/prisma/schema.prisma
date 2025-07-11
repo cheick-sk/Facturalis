@@ -79,23 +79,77 @@ model TimesheetEntry {
   @@index([employeeId, date]) // Index for querying timesheets by employee and date
 }
 
-// Placeholder for future Leave Management module
-model LeaveRequest {
-  id String @id @default(cuid())
-  // ... other fields ...
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
-
-  // Example field, to be defined later
-  status String @default("PENDING")
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
 }
+
+model LeaveType {
+  id                 String  @id @default(cuid())
+  name               String  @unique // e.g., Annual, Sick, Unpaid
+  description        String? @db.Text
+  defaultDaysAllowed Float?  // Default number of days allowed per year for this type, can be overridden in LeaveBalance
+
+  leaveRequests      LeaveRequest[] // Relation to LeaveRequest
+  leaveBalances      LeaveBalance[] // Relation to LeaveBalance
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+}
+
+model LeaveRequest {
+  id           String             @id @default(cuid())
+  startDate    DateTime           @db.Date
+  endDate      DateTime           @db.Date
+  reason       String?            @db.Text
+  status       LeaveRequestStatus @default(PENDING)
+  requestedAt  DateTime           @default(now())
+  approvedAt   DateTime?
+  comments     String?            @db.Text // Comments by employee or approver
+
+  employeeId   String
+  employee     Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  leaveTypeId  String
+  leaveType    LeaveType          @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict) // Prevent deleting LeaveType if requests exist
+
+  approverId   String?            // ID of the employee who approved/rejected
+  approver     Employee?          @relation("ApprovedLeaveRequests", fields: [approverId], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([employeeId, status])
+  @@index([leaveTypeId])
+}
+
+model LeaveBalance {
+  id                String    @id @default(cuid())
+  year              Int       // The year this balance applies to
+  totalDaysAllowed  Float     // Total days allocated for the year for this leave type
+  daysTaken         Float     @default(0)
+  // daysRemaining can be a calculated field in the application logic or a view in DB
+
+  employeeId        String
+  employee          Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  leaveTypeId       String
+  leaveType         LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade) // If type deleted, balance is too
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([employeeId, leaveTypeId, year]) // Ensures one balance entry per employee, per leave type, per year
+}
+
 
 // Placeholder for future Absence Management module
 model Absence {
   id String @id @default(cuid())
   // ... other fields ...
   employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   // Example field, to be defined later
   reason String?

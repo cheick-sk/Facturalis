@@ -15,6 +15,9 @@ import { ConfigModule } from '@nestjs/config'; // For environment variables
     TimesheetEntryModule, // Our new TimesheetEntry module
     ProjectModule, // Our new Project module
     TaskModule, // Our new Task module
+    LeaveTypeModule, // Our new LeaveType module
+    LeaveRequestModule, // Our new LeaveRequest module
+    LeaveBalanceModule, // Our new LeaveBalance module
   ],
   controllers: [AppController],
   providers: [AppService],

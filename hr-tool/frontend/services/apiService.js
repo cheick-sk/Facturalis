@@ -72,3 +72,29 @@ export const timesheetEntryService = {
   update: (id, entryData) => request(`/timesheet-entries/${id}`, { method: 'PATCH', body: entryData }),
   delete: (id) => request(`/timesheet-entries/${id}`, { method: 'DELETE' }),
 };
+
+export const leaveTypeService = {
+  getAll: (params) => request('/leave-types', { params }),
+  getById: (id) => request(`/leave-types/${id}`),
+  create: (data) => request('/leave-types', { method: 'POST', body: data }),
+  update: (id, data) => request(`/leave-types/${id}`, { method: 'PATCH', body: data }),
+  delete: (id) => request(`/leave-types/${id}`, { method: 'DELETE' }),
+};
+
+export const leaveRequestService = {
+  getAll: (params) => request('/leave-requests', { params }),
+  getById: (id) => request(`/leave-requests/${id}`),
+  create: (data) => request('/leave-requests', { method: 'POST', body: data }),
+  updateStatus: (id, data) => request(`/leave-requests/${id}/status`, { method: 'PATCH', body: data }),
+  cancel: (id) => request(`/leave-requests/${id}/cancel`, { method: 'PATCH' }),
+  // delete: (id) => request(`/leave-requests/${id}`, { method: 'DELETE' }), // Usually not directly deleted
+};
+
+export const leaveBalanceService = {
+  getAll: (params) => request('/leave-balances', { params }),
+  getForEmployeeYear: (employeeId, year) => request(`/leave-balances/employee/${employeeId}/year/${year}`),
+  getById: (id) => request(`/leave-balances/${id}`),
+  create: (data) => request('/leave-balances', { method: 'POST', body: data }),
+  update: (id, data) => request(`/leave-balances/${id}`, { method: 'PATCH', body: data }),
+  // delete: (id) => request(`/leave-balances/${id}`, { method: 'DELETE' }), // Usually not directly deleted
+};
