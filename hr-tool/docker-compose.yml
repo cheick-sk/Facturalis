@@ -21,8 +21,10 @@ services:
   backend:
     build: ./backend
     environment:
-      - DB_HOST=postgres
+      - DATABASE_URL=postgresql://hruser:hrpassword@postgres:5432/hrtool?schema=public
+      - DB_HOST=postgres # May be redundant if DATABASE_URL is used by all db clients
       - REDIS_HOST=redis
+      - PORT=3001 # Ensure NestJS listens on this port inside the container
     depends_on:
       - postgres
       - redis
