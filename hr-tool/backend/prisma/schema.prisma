@@ -180,3 +180,270 @@ model Absence {
   @@index([employeeId, startDate])
   @@index([absenceTypeId])
 }
+
+// --- Payroll & Benefits Module ---
+
+enum PayrollCycleFrequency {
+  MONTHLY
+  BI_WEEKLY // Every two weeks
+  WEEKLY
+  // SEMI_MONTHLY // Twice a month (e.g., 15th and last day) - more complex to define exact dates
+}
+
+model PayrollCycle {
+  id            String                @id @default(cuid())
+  name          String                @unique // e.g., "Monthly Salaried Employees", "Bi-Weekly Hourly Workers"
+  frequency     PayrollCycleFrequency
+  // For MONTHLY: dayOfMonth (1-31, or LAST_DAY)
+  // For BI_WEEKLY/WEEKLY: weekDayAnchor (MONDAY, TUESDAY, ...) and an anchorDate to establish the cycle
+  // These details can be stored as structured JSON or separate fields if needed for automation.
+  // For simplicity now, we'll keep it high-level.
+  description   String?               @db.Text
+  effectiveDate DateTime              @db.Date // Date this cycle definition becomes active
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+}
+
+enum PayElementType {
+  EARNING                 // Gross earnings (e.g., Base Salary, Bonus, Overtime Pay)
+  DEDUCTION               // Deductions from gross (e.g., Income Tax, Employee Social Security, Loan Repayment)
+  CONTRIBUTION_EMPLOYER   // Employer contributions (e.g., Employer Social Security, Pension Fund)
+  CONTRIBUTION_EMPLOYEE   // Employee contributions (often same as DEDUCTION but categorized differently for reporting)
+  BENEFIT_TAXABLE         // Taxable benefits (e.g., Company Car value)
+  BENEFIT_NON_TAXABLE     // Non-taxable benefits (e.g., certain health contributions)
+  STATUTORY_DEDUCTION     // Deductions mandated by law (often pre-tax or post-tax specific)
+  REIMBURSEMENT           // Non-taxable reimbursements (e.g., travel expenses)
+}
+
+enum PayElementCalculationRule {
+  FIXED_AMOUNT            // A fixed monetary value
+  PERCENTAGE_OF_BASE      // Percentage of a defined base salary component
+  PERCENTAGE_OF_GROSS     // Percentage of total gross earnings
+  HOURLY_RATE_TIMES_HOURS // Based on an hourly rate and hours worked (requires timesheet integration)
+  PER_UNIT                // Based on units produced/sold etc.
+  CUSTOM_FORMULA          // A defined formula or script (placeholder for complex logic)
+  BALANCE_BASED           // e.g. Loan repayment until balance is zero
+}
+
+model PayElement {
+  id                String                      @id @default(cuid())
+  name              String                      @unique // e.g., "Basic Salary", "Federal Income Tax", "401k Employer Match"
+  code              String?                     @unique // Optional short code for integrations/reporting
+  type              PayElementType
+  calculationRule   PayElementCalculationRule
+  isTaxable         Boolean                     @default(false)
+  isPensionable     Boolean                     @default(false) // Contributes to pension calculation base
+  isRecurring       Boolean                     @default(true)  // Is it applied every pay cycle by default?
+  currency          String                      @default("USD") // Default currency, can be overridden at EmployeePayElement
+  processingOrder   Int                         @default(0)    // Order in which elements are processed (e.g., base first, then percentages, then taxes)
+  description       String?                     @db.Text
+  effectiveDate     DateTime                    @db.Date       @default(now())
+  endDate           DateTime?                   @db.Date       // When this pay element definition is no longer active
+
+  employeePayElements EmployeePayElement[]
+  // salaryStructureElements SalaryStructureElement[] // If PayElements are part of a structure template
+
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+}
+
+// Defines a template/grouping of pay elements
+model SalaryStructure {
+  id                  String    @id @default(cuid())
+  name                String    @unique // e.g., "Executive Level 1", "Software Engineer - Grade III"
+  description         String?   @db.Text
+  // salaryStructureElements SalaryStructureElement[]
+  employeeSalaries    EmployeeSalary[]
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+// // Junction table for SalaryStructure and PayElement (if a structure defines default elements)
+// model SalaryStructureElement {
+//   id                String        @id @default(cuid())
+//   salaryStructureId String
+//   salaryStructure   SalaryStructure @relation(fields: [salaryStructureId], references: [id])
+//   payElementId      String
+//   payElement        PayElement    @relation(fields: [payElementId], references: [id])
+//   defaultValue      Decimal?      // Default value or percentage for this element in this structure
+//   defaultFormula    String?       // Default formula
+//   isMandatory       Boolean       @default(true)
+//   @@unique([salaryStructureId, payElementId])
+// }
+
+
+// Represents an employee's specific salary and pay element configuration
+model EmployeeSalary {
+  id                String              @id @default(cuid())
+  employeeId        String
+  employee          Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  salaryStructureId String?             // Optional link to a predefined structure
+  salaryStructure   SalaryStructure?    @relation(fields: [salaryStructureId], references: [id], onDelete: SetNull)
+  effectiveDate     DateTime            @db.Date // When this salary configuration starts
+  endDate           DateTime?           @db.Date // When this salary configuration ends (for history)
+  currency          String              // e.g., USD, EUR
+  notes             String?             @db.Text
+
+  payElements       EmployeePayElement[]
+  paySlips          PaySlip[]           // Relation to generated payslips
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  @@index([employeeId, effectiveDate])
+}
+
+// Specific instance of a PayElement for an EmployeeSalary record
+model EmployeePayElement {
+  id                String        @id @default(cuid())
+  employeeSalaryId  String
+  employeeSalary    EmployeeSalary @relation(fields: [employeeSalaryId], references: [id], onDelete: Cascade)
+  payElementId      String
+  payElement        PayElement    @relation(fields: [payElementId], references: [id], onDelete: Restrict) // Prevent deleting PayElement if in use
+
+  value             Decimal?      // Fixed amount for this element for this employee (e.g., 50000 for Base Salary)
+  percentage        Decimal?      // Percentage for rules like PERCENTAGE_OF_BASE (e.g., 0.10 for 10%)
+  formula           String?       // Custom formula or reference for calculation for this employee
+  // For HOURLY_RATE_TIMES_HOURS, 'value' could be the hourly rate.
+  // For PER_UNIT, 'value' could be the rate per unit.
+
+  isActive          Boolean       @default(true) // If this specific element is active for the employee's salary
+  startDate         DateTime?     @db.Date      // When this specific element instance starts for the employee
+  endDate           DateTime?     @db.Date      // When this specific element instance ends
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  @@unique([employeeSalaryId, payElementId]) // An employee salary config should have a pay element only once
+}
+
+enum TaxType {
+  INCOME_TAX
+  SOCIAL_SECURITY_EMPLOYEE
+  SOCIAL_SECURITY_EMPLOYER
+  UNEMPLOYMENT_TAX_EMPLOYER
+  HEALTH_TAX
+  OTHER
+}
+
+model TaxRate {
+  id             String    @id @default(cuid())
+  name           String    // e.g., "Federal Income Tax - Single - Bracket 1", "Social Security Employee Contribution"
+  jurisdiction   String    // e.g., "US-Federal", "FR-National", "US-CA-State"
+  taxType        TaxType
+  rate           Decimal   // Percentage rate (e.g., 0.22 for 22%)
+  fixedAmount    Decimal?  // Fixed amount tax, if applicable
+  thresholdMin   Decimal?  // Minimum income threshold for this rate bracket
+  thresholdMax   Decimal?  // Maximum income threshold for this rate bracket
+  notes          String?   @db.Text
+  effectiveDate  DateTime  @db.Date
+  endDate        DateTime? @db.Date
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  @@unique([name, jurisdiction, effectiveDate])
+}
+
+enum BenefitType {
+  HEALTH_INSURANCE
+  DENTAL_INSURANCE
+  VISION_INSURANCE
+  LIFE_INSURANCE
+  RETIREMENT_PLAN // e.g. 401k, Pension
+  MEAL_VOUCHER
+  TRANSPORTATION_ALLOWANCE
+  WELLNESS_PROGRAM
+  STOCK_OPTIONS
+  OTHER
+}
+
+model BenefitPlan {
+  id                          String        @id @default(cuid())
+  name                        String        @unique // e.g., "Premium Health Plan PPO", "Company 401k - Fidelity"
+  provider                    String?       // e.g., "BlueCross", "Fidelity"
+  type                        BenefitType
+  description                 String?       @db.Text
+
+  // Employee contribution details
+  employeeContributionFixed   Decimal?      // Fixed amount per pay period or month
+  employeeContributionPercent Decimal?      // Percentage of salary
+  employeeContributionFrequency PayrollCycleFrequency? // How often employee contribution is deducted
+
+  // Employer contribution details
+  employerContributionFixed   Decimal?
+  employerContributionPercent Decimal?      // e.g., employer match percentage for 401k
+  employerContributionFrequency PayrollCycleFrequency?
+  employerMatchLimitPercent   Decimal?      // Max percentage of salary employer will match up to for retirement plans
+
+  // Tax implications
+  isTaxableToEmployee         Boolean       @default(false) // If the benefit value is considered taxable income
+  taxationDetails             String?       @db.Text // Notes on how it's taxed
+
+  eligibilityRules            String?       @db.Text // e.g., "Full-time employees after 90 days"
+
+  effectiveDate               DateTime      @db.Date
+  endDate                     DateTime?     @db.Date
+
+  employeeBenefits            EmployeeBenefit[]
+
+  createdAt                   DateTime      @default(now())
+  updatedAt                   DateTime      @updatedAt
+}
+
+model EmployeeBenefit {
+  id                        String        @id @default(cuid())
+  employeeId                String
+  employee                  Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  benefitPlanId             String
+  benefitPlan               BenefitPlan   @relation(fields: [benefitPlanId], references: [id], onDelete: Restrict)
+
+  effectiveDate             DateTime      @db.Date // When the employee's enrollment in this plan starts
+  endDate                   DateTime?     @db.Date // When enrollment ends
+
+  // Employee-specific overrides or choices if plan allows
+  employeeSpecificContributionFixed Decimal?
+  employeeSpecificContributionPercent Decimal?
+  coverageLevel             String?       // e.g., "Employee Only", "Employee + Spouse", "Family"
+
+  status                    String        @default("ACTIVE") // e.g. ACTIVE, WAIVED, PENDING_ENROLLMENT, TERMINATED
+
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+  @@unique([employeeId, benefitPlanId, effectiveDate]) // To track history of plan enrollments
+}
+
+
+// --- Placeholder for PaySlip Generation ---
+model PaySlip {
+  id                String    @id @default(cuid())
+  employeeSalaryId  String    // Link to the EmployeeSalary config used for this payslip
+  employeeSalary    EmployeeSalary @relation(fields: [employeeSalaryId], references: [id])
+  payPeriodStartDate DateTime @db.Date
+  payPeriodEndDate  DateTime @db.Date
+  paymentDate       DateTime @db.Date
+  grossEarnings     Decimal
+  totalDeductions   Decimal
+  netPay            Decimal
+  // Store detailed breakdown as JSON or link to PaySlipLineItem model
+  lineItems         Json?     // Store array of {payElementId, name, type, amount, rate, hours, units}
+  // Or: paySlipLineItems PaySlipLineItem[]
+  notes             String?   @db.Text
+  status            String    @default("DRAFT") // DRAFT, CALCULATED, CONFIRMED, PAID, VOIDED
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// model PaySlipLineItem {
+//   id          String  @id @default(cuid())
+//   paySlipId   String
+//   paySlip     PaySlip @relation(fields: [paySlipId], references: [id])
+//   payElementId String // Could link to PayElement or just store name/code
+//   payElementName String
+//   payElementType PayElementType
+//   amount      Decimal
+//   // Optional fields for context
+//   rate        Decimal?
+//   hours       Decimal?
+//   units       Decimal?
+//   isTax         Boolean @default(false)
+//   isBenefit     Boolean @default(false)
+//   isContribution Boolean @default(false)
+// }

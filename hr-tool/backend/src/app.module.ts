@@ -20,6 +20,12 @@ import { ConfigModule } from '@nestjs/config'; // For environment variables
     LeaveBalanceModule, // Our new LeaveBalance module
     AbsenceTypeModule, // Our new AbsenceType module
     AbsenceModule, // Our new Absence module
+    PayrollCycleModule, // Payroll config module
+    SalaryStructureModule, // Payroll config module
+    PayElementModule, // Payroll config module
+    TaxRateModule, // Payroll config module
+    // TODO: Add BenefitPlan module
+    // TODO: Add employee payroll modules (EmployeeSalary, EmployeeBenefit)
   ],
   controllers: [AppController],
   providers: [AppService],
